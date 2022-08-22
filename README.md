@@ -27,13 +27,42 @@ $ carcer "(cddadaddadadadaddddadaddddadaddr y)"
 `carcer` supplies reasonably good error messages:
 
 ```
-$ carcer "(cdrar x"
+$ carcer "()"
 0: at line 1:
-(cdrar x
+()
+ ^
+expected 'c', found )
+
+1: at line 1, in car or cdr:
+()
+ ^
+
+$ carcer "(ca)"
+0: at line 1:
+(ca)
+   ^
+expected 'r', found )
+
+1: at line 1, in car or cdr:
+(ca)
+   ^
+
+$ carcer "(cdar x"
+0: at line 1:
+(cdar x
        ^
 expected ')', found x
 
 1: at line 1, in closing parenthesis:
-(cdrar x
+(cdar x
       ^
+```
+
+## Building
+
+This project requires Rust 1.58. You can get it at [rustup.rs](https://rustup.rs).
+
+```bash
+git clone https://github.com/vrmiguel/carcer
+cargo install --path carcer
 ```

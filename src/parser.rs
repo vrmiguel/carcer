@@ -1,6 +1,8 @@
 use nom::{
     bytes::complete::take_while1,
-    character::complete::{char, digit1, multispace0},
+    character::complete::{
+        char, digit1, multispace0, multispace1,
+    },
     combinator::{cut, not, recognize},
     error::{context, VerboseError},
     sequence::{delimited, pair, preceded},
@@ -14,16 +16,19 @@ use crate::line::Line;
 pub type IResult<'a, T> =
     nom::IResult<&'a str, T, VerboseError<&'a str>>;
 
+/// Parses a line, that is: an s-expression representing
+/// a car or cdr combination applied to an identifier.
+///
+/// E.g.: `(car x)`, `(cadr list)`, `(caaddar monstrous-list)`
 pub(crate) fn parse_line(input: &str) -> IResult<Line> {
     fn parse_inner_line(input: &str) -> IResult<Line> {
+        // Parse the car/cdr combination sequence
         let (rest, sequence) = parse_car_cdr(input)?;
+        // Eat preceding whitespace and then parse the identifier of this expression
         let (rest, identifier) =
-            preceded(multispace0, parse_identifier)(rest)?;
+            preceded(multispace1, parse_identifier)(rest)?;
 
-        let line = Line {
-            sequence,
-            identifier,
-        };
+        let line = Line::new(sequence, identifier);
 
         Ok((rest, line))
     }
@@ -38,15 +43,16 @@ fn parse_car_cdr(input: &str) -> IResult<&str> {
         take_while1(is_part_of_sequence),
     );
     delimited(
-        char('c'),
+        context("car or cdr", char('c')),
         preceded(multispace0, sequence_parser),
         context(
-            "car or cdr sequence",
+            "car or cdr",
             cut(preceded(multispace0, char('r'))),
         ),
     )(input)
 }
 
+/// Parses an identifier, that is: an alphanumeric sequence not starting with a digit
 fn parse_identifier(input: &str) -> IResult<&str> {
     let acceptable_chars = |ch: char| {
         ch.is_ascii_alphanumeric()
@@ -67,6 +73,7 @@ fn parse_identifier(input: &str) -> IResult<&str> {
     Ok((rest, identifier))
 }
 
+/// Parses `inner` eating preceding and following parenthesis
 fn parse_parenthesis_enclosed<'a, T, F>(
     inner: F,
 ) -> impl FnMut(&'a str) -> IResult<T>
